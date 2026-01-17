@@ -119,8 +119,8 @@ async function pushToGitHub(repoUrl) {
     }
 }
 
-const COOLIFY_SERVER = getEnv('COOLIFY_SERVER');
-const COOLIFY_TOKEN = getEnv('COOLIFY_TOKEN');
+const COOLIFY_SERVER = (getEnv('COOLIFY_SERVER') || '').trim();
+const COOLIFY_TOKEN = (getEnv('COOLIFY_TOKEN') || '').trim();
 
 async function deployToCoolify(repoUrl) {
     if (!COOLIFY_SERVER || !COOLIFY_TOKEN) {
@@ -128,7 +128,7 @@ async function deployToCoolify(repoUrl) {
         return;
     }
 
-    log('Deploying to Coolify...');
+    log(`Deploying to Coolify Server: "${COOLIFY_SERVER}"`);
 
     // 1. Get List of Servers
     const servers = await coolifyRequest('/api/v1/servers');
