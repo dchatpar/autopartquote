@@ -83,7 +83,7 @@ export async function POST() {
             results: syncResults
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Zoho sync error:', error);
         return NextResponse.json(
             {

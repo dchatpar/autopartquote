@@ -82,7 +82,7 @@ async function triggerBackgroundEnrichment(
         ]);
 
         // Update part with enriched data
-        const updates: any = {};
+        const updates: Record<string, unknown> = {};
 
         // Add image if found
         if (imageResult.status === 'fulfilled' && imageResult.value.imageUrl) {

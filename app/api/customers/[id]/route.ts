@@ -112,6 +112,7 @@ export async function DELETE(
     }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function syncCustomerToZoho(customer: any) {
     // TODO: Implement Zoho Books API integration
     console.log('Syncing customer to Zoho:', customer.id);

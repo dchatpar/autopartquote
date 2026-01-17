@@ -35,12 +35,10 @@ export function QueuePanel() {
     } = useQueueStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
-    const [isVisible, setIsVisible] = useState(false);
+
 
     // Show panel when there are items
-    useEffect(() => {
-        setIsVisible(items.length > 0);
-    }, [items.length]);
+    const isVisible = items.length > 0;
 
     if (!isVisible) return null;
 
@@ -94,13 +92,7 @@ export function QueuePanel() {
                             >
                                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                             </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setIsVisible(false)}
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
+
                         </div>
                     </div>
 
