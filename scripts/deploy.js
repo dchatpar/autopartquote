@@ -15,7 +15,14 @@ function getEnv(key) {
         if (fs.existsSync(envPath)) {
             const content = fs.readFileSync(envPath, 'utf8');
             const match = content.match(new RegExp(`^${key}=(.*)$`, 'm'));
-            if (match) return match[1].trim().replace(/^["']|["']$/g, '');
+            if (match) {
+                let val = match[1].trim().replace(/^["']|["']$/g, '');
+                // Sanitization for URL
+                if (key === 'COOLIFY_SERVER' && val.endsWith('/')) {
+                    val = val.slice(0, -1);
+                }
+                return val;
+            }
         }
     } catch (e) { }
 
@@ -175,11 +182,18 @@ async function deployToCoolify(repoUrl) {
 
 async function coolifyRequest(endpoint, method = 'GET', body = null) {
     return new Promise((resolve, reject) => {
-        const url = `${COOLIFY_SERVER}${endpoint}`;
-        const isHttps = url.startsWith('https');
-        const lib = isHttps ? https : require('http'); // Handle HTTP server provided by user
+        const urlStr = `${COOLIFY_SERVER}${endpoint}`;
+        try {
+            new URL(urlStr); // Validate URL
+        } catch (e) {
+            reject(`Invalid URL constructed: "${urlStr}" (Check COOLIFY_SERVER)`);
+            return;
+        }
 
-        const req = lib.request(url, {
+        const isHttps = urlStr.startsWith('https');
+        const lib = isHttps ? https : require('http');
+
+        const req = lib.request(urlStr, {
             method,
             headers: {
                 'Authorization': `Bearer ${COOLIFY_TOKEN}`,
