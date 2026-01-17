@@ -6,15 +6,14 @@ import { Upload, FileText, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuoteStore, useImageQueueStore, QuoteItem } from "@/lib/store";
+import { useQuoteStore, QuoteItem } from "@/lib/store";
 import { parsePartsList } from "@/lib/parser";
 import { toast } from "sonner";
 
 export function SmartPaste() {
     const [pasteText, setPasteText] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
-    const { setItems, updateItem } = useQuoteStore();
-    const { addToQueue, markProcessing, markCompleted, markFailed, clearQueue } = useImageQueueStore();
+    const { setItems } = useQuoteStore();
 
     const handlePaste = async () => {
         if (!pasteText.trim()) {
@@ -95,7 +94,7 @@ export function SmartPaste() {
                 <div>
                     <h3 className="font-semibold">Smart Paste</h3>
                     <p className="text-sm text-muted-foreground">
-                        Paste your parts list and we'll handle the rest
+                        Paste your parts list and we&apos;ll handle the rest
                     </p>
                 </div>
             </div>

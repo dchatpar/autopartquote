@@ -161,7 +161,7 @@ Provide as much accurate detail as possible. This information will be displayed 
             }
 
         } catch (parseError) {
-            console.error('Failed to parse AI response:', aiResponse.substring(0, 200));
+            console.error('Failed to parse AI response:', parseError, aiResponse.substring(0, 200));
             return NextResponse.json({
                 success: true,
                 enrichedData: createFallbackData(partNumber, description, brand),

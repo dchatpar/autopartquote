@@ -1,17 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Plus, Trash2, Edit2 } from "lucide-react";
+import { Plus, Trash2, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { useQuoteStore, QuoteItem } from "@/lib/store";
 import { SmartPaste } from "../SmartPaste";
-import { toast } from "sonner";
 
 export function PartsStep() {
     const { items, addItem, updateItem, removeItem } = useQuoteStore();
-    const [searchTerm, setSearchTerm] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const handleAddManual = () => {
@@ -28,16 +26,16 @@ export function PartsStep() {
         setEditingId(newItem.id);
     };
 
-    const handleUpdate = (id: string, field: keyof QuoteItem, value: any) => {
+    const handleUpdate = (id: string, field: keyof QuoteItem, value: string | number) => {
         const item = items.find((i) => i.id === id);
         if (!item) return;
 
         const updates: Partial<QuoteItem> = { [field]: value };
 
         // Recalculate total
-        const quantity = field === "quantity" ? value : item.quantity;
-        const unitPrice = field === "unitPrice" ? value : item.unitPrice;
-        const discount = field === "discount" ? value : item.discount;
+        const quantity = field === "quantity" ? Number(value) : item.quantity;
+        const unitPrice = field === "unitPrice" ? Number(value) : item.unitPrice;
+        const discount = field === "discount" ? Number(value) : item.discount;
 
         updates.total = quantity * unitPrice * (1 - discount / 100);
 

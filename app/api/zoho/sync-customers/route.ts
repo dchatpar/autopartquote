@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { zohoClient } from '@/lib/zoho-client';
 
-export async function POST(req: Request) {
+export async function POST() {
     try {
         // 1. Fetch recently modified customers from Zoho
         // In a real scenario, we'd store the last sync time in a DB setting or simply check the last 24h
@@ -19,7 +19,9 @@ export async function POST(req: Request) {
         };
 
         // 2. Process incoming Zoho contacts -> Local DB
-        for (const contact of zohoContacts) {
+        for (const rawContact of zohoContacts) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const contact = rawContact as any;
             try {
                 // Determine VAT rate based on country or custom field, default to 5% (0.05)
                 // This logic can be refined based on actual business rules

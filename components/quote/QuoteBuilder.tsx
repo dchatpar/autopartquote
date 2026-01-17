@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     ChevronLeft,
@@ -35,6 +35,14 @@ export function QuoteBuilder() {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
+    const handleSave = useCallback(() => {
+        // Save to localStorage (already handled by zustand persist)
+        setLastSaved(new Date());
+        toast.success("Quote auto-saved", {
+            description: new Date().toLocaleTimeString(),
+        });
+    }, []);
+
     // Auto-save every 30 seconds
     useEffect(() => {
         const interval = setInterval(() => {
@@ -42,15 +50,7 @@ export function QuoteBuilder() {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, []);
-
-    const handleSave = () => {
-        // Save to localStorage (already handled by zustand persist)
-        setLastSaved(new Date());
-        toast.success("Quote auto-saved", {
-            description: new Date().toLocaleTimeString(),
-        });
-    };
+    }, [handleSave]);
 
     const handleNext = () => {
         if (currentStep < 4) {
@@ -187,10 +187,10 @@ export function QuoteBuilder() {
                             <div
                                 key={step}
                                 className={`h-2 w-2 rounded-full transition-all ${step === currentStep
-                                        ? 'bg-action-blue w-8'
-                                        : step < currentStep
-                                            ? 'bg-green-500'
-                                            : 'bg-white/20'
+                                    ? 'bg-action-blue w-8'
+                                    : step < currentStep
+                                        ? 'bg-green-500'
+                                        : 'bg-white/20'
                                     }`}
                             />
                         ))}

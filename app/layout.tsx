@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
-import { Sidebar } from "@/components/layout/Sidebar";
+
 import { QueuePanel } from "@/components/queue/QueuePanel";
 
 const inter = Inter({

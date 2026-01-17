@@ -1,4 +1,4 @@
-import { BRAND_PATTERNS, CATEGORY_KEYWORDS, PART_CATEGORIES } from "./constants";
+import { BRAND_PATTERNS, CATEGORY_KEYWORDS } from "./constants";
 
 export interface ParsedPartRow {
     srNumber: number;

@@ -17,8 +17,6 @@ export function ReviewStep() {
         shippingCost,
         total,
         terms,
-        paymentTerms,
-        deliveryTerms,
     } = useQuoteStore();
 
     const issues = [];

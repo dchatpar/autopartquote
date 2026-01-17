@@ -31,7 +31,7 @@ export default function MasterCatalogPage() {
         setIsLoading(true);
         try {
             const res = await fetch(`/api/master-catalog?q=${searchTerm}&limit=50`);
-            const data = await res.json();
+            const data = await res.json() as { success: boolean; data: MasterPart[] };
             if (data.success) {
                 setParts(data.data);
             }

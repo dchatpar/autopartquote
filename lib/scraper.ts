@@ -1,4 +1,4 @@
-import { chromium, Browser, Page } from 'playwright';
+import { chromium, Browser } from 'playwright';
 import { IMAGE_SCRAPER_CONFIG } from './constants';
 import { prisma } from './prisma';
 

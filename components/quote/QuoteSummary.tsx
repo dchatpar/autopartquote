@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { useQuoteStore } from "@/lib/store";
 
 export function QuoteSummary() {
-    const { items, subtotal, taxRate, taxAmount, discount, total } = useQuoteStore();
+    const { items, subtotal, total } = useQuoteStore();
 
     const stats = [
         {

@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer';
 import { QuoteItem } from '@/lib/store';
 import { formatCurrency } from '@/lib/parser';
-import { PDF_CONFIG } from '@/lib/constants';
+
 
 interface PDFGenerationOptions {
   items: QuoteItem[];

@@ -22,6 +22,13 @@ import {
 import { PartDetails } from "@/components/quote/PartDetails";
 import { DataEnrichmentPanel } from "@/components/admin/DataEnrichmentPanel";
 
+interface VehicleCompatibility {
+    make: string;
+    model: string;
+    years: string;
+    [key: string]: unknown;
+}
+
 interface Part {
     id: string;
     partNumber: string;
@@ -31,8 +38,8 @@ interface Part {
     stockQuantity: number;
     sellingPrice: number;
     cachedImageUrl: string | null;
-    compatibleVehicles?: any[];
-    specifications?: any;
+    compatibleVehicles?: VehicleCompatibility[];
+    specifications?: Record<string, string>;
     oemStatus?: string;
     estimatedLifespan?: string;
     aiNotes?: string;
@@ -232,14 +239,17 @@ export default function PartsPage() {
                                                 onClick={() => part.cachedImageUrl && setSelectedImage(part.cachedImageUrl)}
                                             >
                                                 {part.cachedImageUrl ? (
-                                                    <img
-                                                        src={part.cachedImageUrl}
-                                                        alt={part.partNumber}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            e.currentTarget.style.display = 'none';
-                                                        }}
-                                                    />
+                                                    <>
+                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                        <img
+                                                            src={part.cachedImageUrl}
+                                                            alt={part.partNumber}
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                e.currentTarget.style.display = 'none';
+                                                            }}
+                                                        />
+                                                    </>
                                                 ) : (
                                                     <Package className="h-6 w-6 text-muted-foreground" />
                                                 )}
@@ -276,7 +286,7 @@ export default function PartsPage() {
                                                 {part.compatibleVehicles && part.compatibleVehicles.length > 0 && (
                                                     <div className="mt-2 md:hidden">
                                                         <p className="text-xs text-blue-400">
-                                                            Fits: {part.compatibleVehicles.map((v: any) => `${v.make} ${v.model}`).join(', ')}
+                                                            Fits: {part.compatibleVehicles.map((v) => `${v.make} ${v.model}`).join(', ')}
                                                         </p>
                                                     </div>
                                                 )}
@@ -340,11 +350,14 @@ export default function PartsPage() {
                     <DialogContent className="bg-transparent border-none max-w-4xl w-full p-0 shadow-none flex justify-center items-center">
                         {selectedImage && (
                             <div className="relative rounded-lg overflow-hidden border border-white/10 shadow-2xl bg-black/80">
-                                <img
-                                    src={selectedImage}
-                                    alt="Part Preview"
-                                    className="max-h-[80vh] w-auto object-contain"
-                                />
+                                <>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={selectedImage}
+                                        alt="Part Preview"
+                                        className="max-h-[80vh] w-auto object-contain"
+                                    />
+                                </>
                                 <Button
                                     variant="ghost"
                                     size="icon"

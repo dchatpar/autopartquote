@@ -9,6 +9,7 @@ export async function GET(req: Request) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const whereClause: any = {
             isActive: true,
         };
@@ -53,6 +54,7 @@ export async function GET(req: Request) {
             }
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         console.error('Master catalog search error:', error);
         return NextResponse.json(
@@ -93,6 +95,7 @@ export async function POST(req: Request) {
             data: part
         });
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
         if (error.code === 'P2002') { // Unique constraint violation
             return NextResponse.json(

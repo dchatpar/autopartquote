@@ -114,6 +114,7 @@ function generateCustomerCode(name: string): string {
     return (cleaned + 'XXX').substring(0, 3);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function pushCustomerToZoho(customer: any) {
     try {
         console.log(`Pushing customer ${customer.id} to Zoho...`);

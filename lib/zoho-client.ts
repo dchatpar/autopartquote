@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+
 
 interface ZohoConfig {
     clientId: string;
@@ -12,6 +12,16 @@ interface ZohoTokenResponse {
     expires_in: number;
     api_domain: string;
     token_type: string;
+}
+
+interface CustomerInput {
+    name: string;
+    email: string;
+    phone: string;
+    address?: string;
+    company?: string;
+    code?: string;
+    vatNumber?: string;
 }
 
 export class ZohoClient {
@@ -62,7 +72,7 @@ export class ZohoClient {
         }
     }
 
-    async getContacts(lastModifiedTime?: Date): Promise<any[]> {
+    async getContacts(lastModifiedTime?: Date): Promise<Record<string, unknown>[]> {
         const token = await this.getAccessToken();
         const url = "https://www.zohoapis.com/crm/v2/Contacts";
 
@@ -96,7 +106,7 @@ export class ZohoClient {
         }
     }
 
-    async createContact(customer: Record<string, any>): Promise<string> {
+    async createContact(customer: CustomerInput): Promise<string> {
         const token = await this.getAccessToken();
 
         const zohoContact = {
@@ -128,7 +138,7 @@ export class ZohoClient {
         }
     }
 
-    async updateContact(zohoId: string, customer: Record<string, any>): Promise<boolean> {
+    async updateContact(zohoId: string, customer: CustomerInput): Promise<boolean> {
         const token = await this.getAccessToken();
 
         const zohoContact = {

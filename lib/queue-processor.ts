@@ -9,7 +9,6 @@ export async function processQueue() {
         isPaused,
         isProcessing,
         setProcessing,
-        updateItem,
     } = useQueueStore.getState();
 
     if (isPaused || isProcessing) return;
@@ -41,7 +40,6 @@ export async function processQueue() {
 
 async function processItem(item: QueueItem) {
     // Re-fetch item to ensure we have latest details
-    const currentItem = useQueueStore.getState().items.find(i => i.id === item.id) || item;
     const { updateItem } = useQueueStore.getState();
 
     try {
