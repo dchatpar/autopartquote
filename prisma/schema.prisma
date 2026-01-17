@@ -29,6 +29,8 @@ model Part {
   interchangeableParts Json? // Array of alternative part numbers
   aiNotes           String?  @db.Text
   lastEnriched      DateTime?
+  enrichmentStatus  String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  enrichmentError   String?
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

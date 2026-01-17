@@ -11,6 +11,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Database,
+    Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const navigation = [
     { name: "Customers", icon: Users, href: "/customers" },
     { name: "Parts Catalog", icon: Package, href: "/parts" },
     { name: "Master Catalog", icon: Database, href: "/master-catalog" },
+    { name: "Enrichment Queue", icon: Sparkles, href: "/queue" },
     { name: "Analytics", icon: BarChart3, href: "/analytics" },
     { name: "Settings", icon: Settings, href: "/settings" },
 ];

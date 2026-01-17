@@ -64,25 +64,36 @@ export function SmartPaste() {
     };
 
     const startBackgroundProcessing = async (items: QuoteItem[]) => {
-        const { addToQueue } = await import('@/lib/queue-store').then(m => m.useQueueStore.getState());
-        const { processQueue } = await import('@/lib/queue-processor');
+        try {
+            // Send to backend queue
+            const res = await fetch('/api/parts/batch-import', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    parts: items.map(item => ({
+                        partNumber: item.partNumber,
+                        description: item.description,
+                        brand: item.brand,
+                        quantity: item.quantity,
+                        unitPrice: item.unitPrice
+                    }))
+                })
+            });
 
-        // Add items to queue
-        const queueItems = items.map(item => ({
-            id: item.id,
-            partNumber: item.partNumber,
-            description: item.description,
-            brand: item.brand,
-        }));
+            if (!res.ok) throw new Error("Failed to queue items");
 
-        addToQueue(queueItems);
+            toast.success(`queued ${items.length} parts!`, {
+                description: "Go to the Queue page to monitor progress.",
+                action: {
+                    label: "View Queue",
+                    onClick: () => window.location.href = '/queue'
+                }
+            });
 
-        toast.success(`Added ${items.length} parts to queue!`, {
-            description: "Processing in background - you can continue working",
-        });
-
-        // Start processing
-        processQueue();
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to queue items for background processing");
+        }
     };
 
     return (
