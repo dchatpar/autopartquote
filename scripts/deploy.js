@@ -112,21 +112,114 @@ async function pushToGitHub(repoUrl) {
     }
 }
 
+const COOLIFY_SERVER = getEnv('COOLIFY_SERVER');
+const COOLIFY_TOKEN = getEnv('COOLIFY_TOKEN');
+
+async function deployToCoolify(repoUrl) {
+    if (!COOLIFY_SERVER || !COOLIFY_TOKEN) {
+        log('Coolify credentials missing. Skipping automated Coolify deployment.');
+        return;
+    }
+
+    log('Deploying to Coolify...');
+
+    // 1. Get List of Servers
+    const servers = await coolifyRequest('/api/v1/servers');
+    if (!servers || servers.length === 0) throw new Error('No servers found in Coolify.');
+    const serverUuid = servers[0].uuid; // Use first server
+
+    // 2. Check if project exists or create new
+    let project = null;
+    try {
+        const projects = await coolifyRequest('/api/v1/projects');
+        project = projects.find(p => p.name === PROJECT_NAME);
+    } catch (e) { }
+
+    if (!project) {
+        log(`Creating new project: ${PROJECT_NAME}...`);
+        project = await coolifyRequest('/api/v1/projects', 'POST', {
+            name: PROJECT_NAME,
+            description: 'Deployed via AutoPartQuote'
+        });
+    }
+    const projectUuid = project.uuid;
+
+    // 3. Create Environment (Production)
+    let environment = project.environments?.find(e => e.name === 'production');
+    if (!environment) {
+        // Environments usually exist by default, but just in case
+        environment = await coolifyRequest(`/api/v1/projects/${projectUuid}/environments`, 'POST', { name: 'production' });
+    }
+
+    // 4. Create Application (Git Resource)
+    log('Creating application resource...');
+    const app = await coolifyRequest(`/api/v1/projects/${projectUuid}/${environment.name}/applications`, 'POST', {
+        server_uuid: serverUuid,
+        git_repository: repoUrl,
+        branch: 'main',
+        build_pack: 'docker_compose',
+        ports_expose: '3000',
+        name: PROJECT_NAME,
+        git_user: GITHUB_USERNAME,
+        git_token: GITHUB_TOKEN
+    });
+
+    log(`Application created! UUID: ${app.uuid}`);
+
+    // 5. Deploy
+    log('Triggering deployment...');
+    await coolifyRequest(`/api/v1/applications/${app.uuid}/deploy`, 'POST', { force: true });
+
+    log('Deployment triggered successfully! Check your Coolify dashboard.');
+}
+
+async function coolifyRequest(endpoint, method = 'GET', body = null) {
+    return new Promise((resolve, reject) => {
+        const url = `${COOLIFY_SERVER}${endpoint}`;
+        const isHttps = url.startsWith('https');
+        const lib = isHttps ? https : require('http'); // Handle HTTP server provided by user
+
+        const req = lib.request(url, {
+            method,
+            headers: {
+                'Authorization': `Bearer ${COOLIFY_TOKEN}`,
+                'Content-Type': 'application/json'
+            }
+        }, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                if (res.statusCode >= 200 && res.statusCode < 300) {
+                    try {
+                        resolve(JSON.parse(data));
+                    } catch (e) { resolve(data); } // Handle non-JSON response
+                } else {
+                    reject(`Coolify API Error (${res.statusCode}): ${data}`);
+                }
+            });
+        });
+
+        req.on('error', (e) => reject(e));
+        if (body) req.write(JSON.stringify(body));
+        req.end();
+    });
+}
+
 async function main() {
     if (!GITHUB_TOKEN || !GITHUB_USERNAME) {
         error('Missing GitHub credentials. Please provide GITHUB_TOKEN and GITHUB_USERNAME in .env.coolify');
     }
 
     try {
+        log('Starting Deployment Process...');
         const repoUrl = await createGitHubRepo();
         await pushToGitHub(repoUrl);
 
-        console.log('\n\x1b[32m✅ DEPLOYMENT CODE PUSHED SUCCESSFULLY!\x1b[0m');
-        console.log(`\nNext Steps in Coolify:`);
-        console.log(`1. Create New Resource -> Git Repository (Private)`);
-        console.log(`2. Paste this URL: \x1b[33m${repoUrl}\x1b[0m`);
-        console.log(`3. Use User: ${GITHUB_USERNAME} and your Token.`);
-        console.log(`4. Select "Docker Compose" build pack.`);
+        console.log('\n\x1b[32m✅ CODE PUSHED TO GITHUB!\x1b[0m');
+
+        await deployToCoolify(repoUrl);
+        console.log('\n\x1b[32m🚀 FULL DEPLOYMENT SEQUENCE COMPLETE!\x1b[0m');
+
     } catch (e) {
         error(e);
     }
