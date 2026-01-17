@@ -35,8 +35,10 @@ export async function POST(request: NextRequest) {
         });
 
         // Trigger background enrichment (non-blocking)
-        triggerBackgroundEnrichment(part.id, partNumber, description, brand).catch(err => {
-            console.error('Background enrichment failed:', err);
+        // Helper function for quick enrichment for new items
+        // On Vercel, we must await this or use a queue, otherwise the lambda dies
+        await triggerBackgroundEnrichment(part.id, partNumber, description, brand).catch(err => {
+            console.error('Enrichment failed:', err);
         });
 
         return NextResponse.json({

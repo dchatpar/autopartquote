@@ -1,5 +1,4 @@
-import { chromium, Browser } from 'playwright';
-import { IMAGE_SCRAPER_CONFIG } from './constants';
+import puppeteer from 'puppeteer';
 import { prisma } from './prisma';
 
 export interface ScraperResult {
@@ -10,49 +9,9 @@ export interface ScraperResult {
     cached: boolean;
 }
 
-let browser: Browser | null = null;
-
 /**
- * Initialize browser instance (reused across scraping sessions)
- */
-async function getBrowser(): Promise<Browser> {
-    if (!browser) {
-        browser = await chromium.launch({
-            headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        });
-    }
-    return browser;
-}
-
-/**
- * Close browser instance
- */
-export async function closeBrowser(): Promise<void> {
-    if (browser) {
-        await browser.close();
-        browser = null;
-    }
-}
-
-/**
- * Check if image URL contains watermark indicators
- */
-function hasWatermark(url: string): boolean {
-    const lowerUrl = url.toLowerCase();
-    return IMAGE_SCRAPER_CONFIG.watermarkBlacklist.some(term => lowerUrl.includes(term));
-}
-
-/**
- * Check if image is from a preferred domain
- */
-function isPreferredDomain(url: string): boolean {
-    const lowerUrl = url.toLowerCase();
-    return IMAGE_SCRAPER_CONFIG.preferredDomains.some(domain => lowerUrl.includes(domain));
-}
-
-/**
- * Scrape image for a single part number
+ * Scrape image using Puppeteer
+ * Optimized for robustness and serverless environments (as much as possible)
  */
 export async function scrapePartImage(
     partNumber: string,
@@ -64,7 +23,6 @@ export async function scrapePartImage(
     });
 
     if (cached) {
-        // Update last used timestamp
         await prisma.imageCache.update({
             where: { partNumber },
             data: { lastUsed: new Date() },
@@ -79,140 +37,118 @@ export async function scrapePartImage(
         };
     }
 
-    // Scrape new image
+    let browser = null;
     try {
-        const browser = await getBrowser();
-        const context = await browser.newContext({
-            userAgent: getRandomUserAgent(),
-            viewport: { width: 1920, height: 1080 },
-        });
-        const page = await context.newPage();
+        console.log(`Starting scrape for ${partNumber}...`);
 
-        // Set timeout
-        page.setDefaultTimeout(IMAGE_SCRAPER_CONFIG.timeout);
+        // Launch Puppeteer with Vercel-friendly flags
+        browser = await puppeteer.launch({
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--single-process', // Crucial for some serverless envs
+                '--no-zygote',
+            ],
+            // minimal executable path logic if needed, but relying on default for now
+        });
+
+        const page = await browser.newPage();
+
+        // Block resources to speed up
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            const resourceType = req.resourceType();
+            if (['font', 'stylesheet', 'media'].includes(resourceType)) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
+
+        await page.setViewport({ width: 1280, height: 800 });
 
         // Search Google Images
-        const query = encodeURIComponent(`${partNumber} ${description} genuine auto part`);
-        await page.goto(`https://www.google.com/search?q=${query}&tbm=isch`, {
-            waitUntil: 'domcontentloaded',
+        const query = encodeURIComponent(`${partNumber} ${description} auto part`);
+        const searchUrl = `https://www.google.com/search?q=${query}&tbm=isch`;
+
+        await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 15000 });
+
+        // Wait for at least one image container
+        await page.waitForSelector('img', { timeout: 5000 }).catch(() => console.log('Timeout waiting for images'));
+
+        const imageUrls = await page.evaluate(() => {
+            const images = Array.from(document.querySelectorAll('img'));
+            // Filter out small icons/logos
+            return images
+                .filter(img => img.width > 50 && img.height > 50)
+                .map(img => img.src)
+                .filter(src => src.startsWith('http'))
+                .slice(0, 5);
         });
 
-        // Wait for images to load
-        await page.waitForSelector('img', { timeout: 5000 }).catch(() => { });
+        console.log(`Found ${imageUrls.length} candidate images for ${partNumber}`);
 
-        // Extract image URLs
-        const imageData = await page.evaluate((config) => {
-            const imgs = Array.from(document.querySelectorAll('img'));
+        if (imageUrls.length > 0) {
+            const bestImage = imageUrls[0];
 
-            return imgs
-                .filter(img => img.width > config.minImageWidth)
-                .map(img => ({
-                    url: img.src,
-                    width: img.width,
-                    height: img.height,
-                }))
-                .slice(0, 10); // Get first 10 candidates
-        }, IMAGE_SCRAPER_CONFIG);
+            // Cache it
+            await prisma.imageCache.create({
+                data: {
+                    partNumber,
+                    imageUrl: bestImage,
+                    quality: 'medium',
+                    source: 'google_scraper',
+                },
+            });
 
-        await context.close();
-
-        // Find best image
-        let bestImage = imageData.find(img =>
-            isPreferredDomain(img.url) && !hasWatermark(img.url)
-        );
-
-        if (!bestImage) {
-            bestImage = imageData.find(img => !hasWatermark(img.url));
-        }
-
-        if (!bestImage && imageData.length > 0) {
-            bestImage = imageData[0];
-        }
-
-        if (!bestImage) {
             return {
                 partNumber,
-                imageUrl: null,
-                quality: 'low',
-                source: 'google',
+                imageUrl: bestImage,
+                quality: 'medium',
+                source: 'google_scraper',
                 cached: false,
             };
         }
 
-        // Determine quality
-        const quality = isPreferredDomain(bestImage.url) ? 'high' :
-            bestImage.width > 800 ? 'medium' : 'low';
-
-        // Cache the result
-        await prisma.imageCache.create({
-            data: {
-                partNumber,
-                imageUrl: bestImage.url,
-                quality,
-                source: 'google',
-            },
-        });
-
-        return {
-            partNumber,
-            imageUrl: bestImage.url,
-            quality,
-            source: 'google',
-            cached: false,
-        };
-
-    } catch (error) {
-        console.error(`Failed to scrape image for ${partNumber}:`, error);
         return {
             partNumber,
             imageUrl: null,
             quality: 'low',
-            source: 'google',
+            source: 'not_found',
             cached: false,
         };
+
+    } catch (error) {
+        console.error(`Scraping failed for ${partNumber}:`, error);
+        return {
+            partNumber,
+            imageUrl: null,
+            quality: 'low',
+            source: 'error',
+            cached: false,
+        };
+    } finally {
+        if (browser) {
+            await browser.close().catch(e => console.error('Error closing browser:', e));
+        }
     }
 }
 
 /**
- * Batch scrape images with concurrency control
+ * Batch scrape images
  */
 export async function batchScrapeImages(
     parts: Array<{ partNumber: string; description: string }>
 ): Promise<ScraperResult[]> {
     const results: ScraperResult[] = [];
-    const queue = [...parts];
-    const workers: Promise<void>[] = [];
-
-    const processNext = async () => {
-        while (queue.length > 0) {
-            const part = queue.shift();
-            if (!part) break;
-
-            const result = await scrapePartImage(part.partNumber, part.description);
-            results.push(result);
-        }
-    };
-
-    // Create concurrent workers
-    for (let i = 0; i < IMAGE_SCRAPER_CONFIG.concurrentWorkers; i++) {
-        workers.push(processNext());
+    for (const part of parts) {
+        results.push(await scrapePartImage(part.partNumber, part.description));
     }
-
-    await Promise.all(workers);
     return results;
-}
 
-/**
- * Get random user agent to avoid detection
- */
-function getRandomUserAgent(): string {
-    const userAgents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
-    ];
 
-    return userAgents[Math.floor(Math.random() * userAgents.length)];
+    return results;
 }
