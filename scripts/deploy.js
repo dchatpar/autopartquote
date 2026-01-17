@@ -183,12 +183,6 @@ async function deployToCoolify(repoUrl) {
 async function coolifyRequest(endpoint, method = 'GET', body = null) {
     return new Promise((resolve, reject) => {
         const urlStr = `${COOLIFY_SERVER}${endpoint}`;
-        try {
-            new URL(urlStr); // Validate URL
-        } catch (e) {
-            reject(`Invalid URL constructed: "${urlStr}" (Check COOLIFY_SERVER)`);
-            return;
-        }
 
         const isHttps = urlStr.startsWith('https');
         const lib = isHttps ? https : require('http');
