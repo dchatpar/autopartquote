@@ -1,0 +1,37 @@
+name: Deploy to Coolify
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Coolify
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_SERVER: ${{ secrets.COOLIFY_SERVER }}
+          COOLIFY_APP_ID: ${{ secrets.COOLIFY_APP_ID }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            -H "Content-Type: application/json" \
+            "${COOLIFY_SERVER}/api/v1/deploy" \
+            -d "{\"application_uuid\": \"${COOLIFY_APP_ID}\"}"
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment to Coolify successful!"
+          else
+            echo "❌ Deployment to Coolify failed!"
+            exit 1
+          fi
